@@ -1,0 +1,7 @@
+{
+  "crm": {
+    "loginUrl": "https://example-crm-login-url",
+    "notes": "Copy this file to data/integration-sources.json after you know the CRM URL. Do not put passwords here."
+  }
+}
+

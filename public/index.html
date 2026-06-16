@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>营期转化监控看板</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">书</span>
+        <div>
+          <strong>营期转化监控</strong>
+          <small>目标配置 + Excel 实际</small>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="overview">总览</button>
+        <button class="nav-item" data-view="plan">计划中心</button>
+        <button class="nav-item" data-view="prediction">营收日历</button>
+        <button class="nav-item" data-view="channelAnalysis">投放分析</button>
+        <button class="nav-item" data-view="campaigns">营期监控</button>
+        <button class="nav-item" data-view="config">配置中心</button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="pageTitle">总览</h1>
+          <p id="pageSubtitle">在线配置目标，导入结果数据后查看达成和异常。</p>
+        </div>
+        <div class="meta">
+          <span id="latestDate">未加载</span>
+          <span id="sheetCount">0 张表</span>
+        </div>
+      </header>
+
+      <section id="emptyState" class="empty-state">
+        <div class="empty-panel">
+          <h2>先配置目标或导入结果</h2>
+          <p>预算中心、R值目标和建期计划可以在线编辑，也可以下载 CSV 模板后线下维护再导入。</p>
+          <button id="goConfig">进入配置中心</button>
+        </div>
+      </section>
+
+      <section id="overview" class="view active">
+        <div class="toolbar overview-toolbar">
+          <input id="overviewMonthFilter" type="month" />
+          <button id="revenueSyncButton" class="primary-btn" type="button">更新 CRM 数据</button>
+        </div>
+        <div id="overviewBoard" class="overview-design-board"></div>
+      </section>
+
+      <section id="plan" class="view">
+        <section class="panel plan-intro">
+          <div class="panel-head">
+            <div>
+              <h2>计划中心</h2>
+              <p class="muted">查看预算拆解、预算版本变化和营期预算核对，经营结果类信息放到监控视角。</p>
+            </div>
+            <div class="toolbar compact">
+              <label class="inline-label">预算月份<input id="budgetMonth" type="month" /></label>
+              <button class="ghost-btn" id="exportPonyBudget" type="button">生成Pony营期规划</button>
+              <button class="primary-btn" id="saveBudgetSnapshot" type="button">固定本次规划</button>
+            </div>
+          </div>
+          <div class="config-tabs plan-tabs" role="tablist" aria-label="计划中心模块">
+            <button class="config-tab" type="button" data-plan-tab="analysis">预算分析报告</button>
+            <button class="config-tab" type="button" data-plan-tab="snapshot">快照变化</button>
+            <button class="config-tab" type="button" data-plan-tab="campaignBudget">营期预算</button>
+          </div>
+        </section>
+
+        <section class="panel budget-panel plan-tab-panel" id="planAnalysis">
+          <div class="panel-head">
+            <div>
+              <h2>预算分析报告</h2>
+              <p class="feature-note">仅展示预算拆解、分析和解释；经营结果类信息放到经营监控视角。</p>
+            </div>
+          </div>
+          <div id="budgetKpis" class="kpi-grid dashboard-kpis"></div>
+          <div class="budget-report-layout">
+            <section class="report-section">
+              <h3>Leads 拆解</h3>
+              <p class="muted">按营期转化落月拆解可用 Leads；接量在本月但转化不落本月的部分会进入流向下月。</p>
+              <div id="budgetBreakdown" class="dashboard-stack"></div>
+            </section>
+            <section class="report-section">
+              <h3>营收目标拆解</h3>
+              <div id="budgetRevenueBreakdown" class="dashboard-stack"></div>
+            </section>
+            <section class="report-section">
+              <h3>预算解释 / 完整性提示</h3>
+              <p class="muted">这里只提示影响预算可信度的问题，例如 Leads 目标未命中接量期、营期缺 R 值目标等。</p>
+              <div id="budgetIntegrity" class="dashboard-stack"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="panel budget-panel plan-tab-panel" id="planSnapshot">
+          <div class="panel-head">
+            <div>
+              <h2>快照变化</h2>
+              <p class="feature-note">用于查看最近一次固定预算后，当前规划发生了哪些变化。</p>
+            </div>
+          </div>
+          <div id="budgetSnapshotKpis" class="kpi-grid dashboard-kpis"></div>
+          <div id="budgetSnapshotDiff" class="snapshot-diff"></div>
+        </section>
+
+        <section class="panel budget-panel plan-tab-panel" id="planCampaignBudget">
+          <div class="panel-head">
+            <div>
+              <h2>营期预算</h2>
+              <p class="feature-note">一个营期一行；左侧为完整营期预算，右侧按当前自然月展示接量、D1-D13和D4-D13 R值目标。</p>
+              <div class="toolbar compact campaign-budget-actions">
+                <button class="ghost-btn" id="editCampaignBudgetR" type="button">编辑R值</button>
+                <button class="ghost-btn" id="batchFillCampaignBudgetR" type="button" hidden>批量填R值</button>
+                <button class="ghost-btn" id="copyCampaignBudgetR" type="button" hidden>复制R值</button>
+                <button class="primary-btn" id="saveCampaignBudgetR" type="button" hidden>保存R值</button>
+                <button class="ghost-btn" id="cancelCampaignBudgetR" type="button" hidden>取消</button>
+              </div>
+            </div>
+          </div>
+          <div id="campaignBudgetCalendar" class="campaign-budget-calendar"></div>
+        </section>
+      </section>
+
+      <section id="prediction" class="view">
+        <div class="toolbar overview-toolbar">
+          <input id="predictionMonth" type="month" />
+          <button class="ghost-btn" id="refreshPrediction" type="button">刷新推演</button>
+          <button class="primary-btn" id="savePredictionSnapshot" type="button">保存本次推演</button>
+          <span id="predictionHint" class="muted">按未来自然日、营期、子渠道、D阶段推演。</span>
+        </div>
+        <section class="panel">
+          <div class="panel-head"><h2>系统推演</h2><span class="muted">按营期、子渠道、D阶段计算</span></div>
+          <div id="predictionKpis" class="kpi-grid dashboard-kpis"></div>
+          <div class="revenue-calendar">
+            <div class="calendar-head">
+              <div>
+                <h3>推演营收日历</h3>
+                <p>全月紧凑视图，<span class="text-red">红色</span>为已发生实际，<span class="text-green">绿色</span>为未发生推演。</p>
+              </div>
+              <div class="toolbar compact">
+                <strong id="revenueWeekLabel"></strong>
+              </div>
+            </div>
+            <div id="revenueCalendar"></div>
+            <div id="revenueCalendarDetail" class="calendar-detail"></div>
+          </div>
+        </section>
+        <details class="panel report-collapse">
+          <summary>
+            <strong>月度复盘报告</strong>
+            <span>需要汇报时展开生成</span>
+          </summary>
+          <div class="toolbar compact report-actions">
+            <button class="ghost-btn" id="generatePredictionReport" type="button">生成月度复盘报告</button>
+            <button class="ghost-btn" id="copyPredictionReport" type="button">复制报告</button>
+            <button class="ghost-btn" id="exportPredictionMarkdown" type="button">导出Markdown</button>
+            <button class="ghost-btn" id="exportPredictionHtml" type="button">导出HTML</button>
+          </div>
+          <pre id="predictionReport" class="report-box">点击“生成月度复盘报告”后，这里会生成可汇报版本。</pre>
+        </details>
+      </section>
+
+      <section id="config" class="view">
+        <div class="config-tabs" role="tablist" aria-label="配置模块">
+          <button class="config-tab" type="button" data-config-tab="channels">渠道</button>
+          <button class="config-tab" type="button" data-config-tab="teachers">讲师</button>
+          <button class="config-tab" type="button" data-config-tab="campaigns">营期管理</button>
+          <button class="config-tab" type="button" data-config-tab="traffic">流量规划</button>
+          <button class="config-tab" type="button" data-config-tab="conversion">转化目标</button>
+        </div>
+        <div class="actions-row">
+          <button class="primary-btn" id="saveConfig">保存配置</button>
+          <input id="configFileInput" type="file" accept="application/json,.json" hidden />
+          <button class="ghost-btn" id="importConfigFile" type="button">导入完整备份</button>
+          <button class="ghost-btn" id="exportConfigFile" type="button">导出完整备份</button>
+          <span id="configSaveHint" class="muted"></span>
+        </div>
+
+        <section id="configChannels" class="config-tab-panel">
+          <div class="config-grid">
+            <section class="panel">
+              <div class="panel-head"><h2>渠道</h2><button class="ghost-btn" id="addChannel">新增渠道</button></div>
+              <div id="channelEditor" class="editor-list"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head"><h2>子渠道</h2><button class="ghost-btn" id="addSubchannel">新增子渠道</button></div>
+              <div id="subchannelEditor" class="editor-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="configTeachers" class="config-tab-panel">
+          <section class="panel">
+            <div class="panel-head"><h2>讲师</h2><button class="ghost-btn" id="addTeacher">新增讲师</button></div>
+            <div id="teacherEditor" class="editor-list"></div>
+          </section>
+        </section>
+
+        <section id="configCampaigns" class="config-tab-panel">
+          <section class="panel intake-rule-panel">
+            <div class="panel-head"><h2>接量规则</h2><button class="ghost-btn" id="addIntakeRule">新增规则</button></div>
+            <p class="muted">按“开课周几 → 接量开始/结束周几几点”配置，建期时直接选择规则。</p>
+            <div id="intakeRuleEditor" class="editor-list"></div>
+          </section>
+          <div id="builder">
+        <section class="panel builder-panel">
+          <div class="panel-head">
+            <h2>建立营期</h2>
+            <div class="toolbar compact">
+              <input id="campaignPlanCsvInput" type="file" accept=".csv,text/csv" hidden />
+              <button class="ghost-btn" id="downloadCampaignPlanCsv" type="button">下载建期模板</button>
+              <button class="ghost-btn" id="importCampaignPlanCsv" type="button">导入建期CSV</button>
+            </div>
+          </div>
+          <div class="builder-grid">
+            <label>起始大营期编号<input id="baseNo" type="number" value="894" /></label>
+            <label>小营期编号<input id="subNo" type="number" value="1" /></label>
+            <label>老师<select id="teacherCode"></select></label>
+            <label>接量规则<select id="intakeRuleSelect"></select></label>
+            <label>开课日期<input id="openDate" type="date" /></label>
+            <label>接量开始<input id="intakeStart" type="date" /></label>
+            <label>接量结束<input id="intakeEnd" type="date" /></label>
+            <label>批量期数<input id="batchCount" type="number" min="1" value="1" /></label>
+            <label>一键建期月份 <span class="new-badge">新增</span><input id="oneClickMonth" type="month" /></label>
+            <div class="builder-field weekday-field">
+              <strong>批量开课周几</strong>
+              <div id="openWeekdays" class="weekday-options"></div>
+            </div>
+          </div>
+          <p class="feature-note">红字说明：选择接量规则后，系统会按“周几几点”自动计算接量时间；只有选择“自定义接量日期”时，接量开始/结束日期才作为建期依据。</p>
+          <h3>选择子渠道</h3>
+          <div id="builderSubchannels" class="checkbox-grid"></div>
+          <div class="actions-row">
+            <button class="ghost-btn" id="previewCampaigns">预览营期</button>
+            <button class="primary-btn" id="createCampaigns">保存营期</button>
+            <button class="ghost-btn" id="oneClickCreateMonth" type="button" disabled>一键生成所选月份营期</button>
+            <span class="feature-note">红字说明：一键建期暂时锁定，当前请使用“预览营期”和“保存营期”建期。</span>
+            <span id="oneClickHint" class="muted"></span>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>已建立营期</h2>
+            <div class="toolbar compact">
+              <label class="inline-label">查看月份<input id="builderMonthFilter" type="month" /></label>
+              <button class="ghost-btn" id="toggleBuilderSort" type="button">开课日期倒序</button>
+              <button class="ghost-btn" id="selectVisibleCampaigns" type="button">全选</button>
+              <button class="ghost-btn" id="clearVisibleCampaigns" type="button">取消选择</button>
+              <button class="ghost-btn" id="toggleCampaignSubSync" type="button">同步子渠道到营期</button>
+              <button class="delete-btn" id="bulkDeleteCampaigns" type="button">删除选中</button>
+              <span id="campaignConfigCount">0</span>
+            </div>
+          </div>
+          <div id="campaignSubSyncPanel" class="campaign-sub-sync-panel" hidden></div>
+          <input id="selectAllCampaignRows" type="checkbox" hidden />
+          <div id="campaignConfigRows" class="campaign-shell-timeline"></div>
+        </section>
+          </div>
+        </section>
+
+        <section id="calendarTargets" class="config-tab-panel">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>按日期填写子渠道 Leads 目标</h2>
+              <div class="toolbar compact">
+                <label class="inline-label">日历月份<input id="targetMonth" type="month" /></label>
+                <button class="ghost-btn" id="buildTargetGrid">生成日历</button>
+                <input id="leadTargetCsvInput" type="file" accept=".csv,text/csv" hidden />
+                <button class="ghost-btn" id="downloadLeadTargetTemplate" type="button">下载目标模板</button>
+                <button class="ghost-btn" id="importLeadTargetCsv" type="button">导入目标CSV</button>
+                <button class="ghost-btn" id="copyTargetToMonth" type="button">复制到每日</button>
+              </div>
+            </div>
+            <div id="targetGrid" class="target-grid"></div>
+            <div class="actions-row">
+              <button class="primary-btn" id="saveTargets">保存预算目标</button>
+              <span id="targetSaveHint" class="muted">按天手填，不做系统均摊。</span>
+            </div>
+          </section>
+        </section>
+
+        <section id="rTemplates" class="config-tab-panel">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>子渠道 D4-D13 目标R值</h2>
+              <div class="toolbar compact">
+                <input id="rTemplateCsvInput" type="file" accept=".csv,text/csv" hidden />
+                <button class="ghost-btn" id="downloadRTemplateCsv" type="button">下载R值目标</button>
+                <button class="ghost-btn" id="importRTemplateCsv" type="button">导入R值CSV</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="r-template-table">
+                <thead id="rTemplateHead"></thead>
+                <tbody id="rTemplateRows"></tbody>
+              </table>
+            </div>
+            <div class="actions-row">
+              <button class="primary-btn" id="saveRTemplates">保存R值目标</button>
+              <span class="muted">新建营期会复制这套模板，单期后续可覆盖。</span>
+            </div>
+            <div class="copy-panel">
+              <div class="panel-head compact-head">
+                <h3>复制到已建立营期</h3>
+                <div class="toolbar compact">
+                  <button class="ghost-btn" id="selectAllCampaignCopies" type="button">全选</button>
+                  <button class="ghost-btn" id="clearCampaignCopies" type="button">清空</button>
+                  <button class="primary-btn" id="copyRTemplatesToCampaigns" type="button">复制当前R值</button>
+                </div>
+              </div>
+              <div id="rTemplateCampaignList" class="checkbox-grid compact-list"></div>
+              <p class="muted">可单选、多选或全选；复制后会写入这些营期的单期R值覆盖。</p>
+            </div>
+          </section>
+        </section>
+      </section>
+
+      <section id="campaigns" class="view">
+        <div class="toolbar">
+          <input id="campaignSearch" type="search" placeholder="搜索营期 / 阶段 / D阶段 / 分类" />
+          <select id="campaignModeFilter">
+            <option value="abnormal">只看异常</option>
+            <option value="all">全部营期</option>
+          </select>
+          <select id="stageFilter">
+            <option value="">全部阶段</option>
+          </select>
+          <input id="actualFileInput" type="file" accept=".json,application/json,.csv,text/csv,.xlsx,.xlsm,.xls" hidden />
+          <button class="ghost-btn" id="importActualFile" type="button">导入结果数据</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>营期</th>
+                <th>阶段</th>
+                <th>D阶段</th>
+                <th>Leads</th>
+                <th>GMV</th>
+                <th>正价学员</th>
+                <th>转化率</th>
+                <th>ROI</th>
+                <th>R值</th>
+                <th>分类</th>
+              </tr>
+            </thead>
+            <tbody id="campaignRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="channelAnalysis" class="view">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>投放渠道分析</h2>
+            <p class="muted">上传新版投放 CSV，按开课日期、工作室、负责人、业务分类和渠道号查看走势。</p>
+            </div>
+            <div class="toolbar compact">
+              <input id="channelAnalysisFileInput" type="file" accept=".csv,text/csv" hidden />
+              <button class="ghost-btn" id="importChannelAnalysisFile" type="button">导入投放数据</button>
+              <button class="ghost-btn" id="showTeamCalibration" type="button">工作室校准</button>
+            </div>
+          </div>
+          <div class="config-tabs plan-tabs" role="tablist" aria-label="投放分析模块">
+            <button class="config-tab" type="button" data-channel-analysis-tab="analysis">趋势分析</button>
+            <button class="config-tab" type="button" data-channel-analysis-tab="calibration">工作室校准</button>
+          </div>
+          <p id="channelAnalysisHint" class="muted">尚未导入投放数据。</p>
+        </section>
+
+        <section id="channelAnalysisPanel" class="channel-analysis-layout">
+          <div class="channel-analysis-main">
+            <section class="panel channel-analysis-workbench">
+              <div class="panel-head compact-head">
+                <h2>分析工作台</h2>
+                <div class="toolbar compact">
+                  <button class="ghost-btn" type="button" data-channel-reset>回到全部</button>
+                  <button class="ghost-btn" type="button" data-channel-clear-compare>清空对比</button>
+                </div>
+              </div>
+              <div id="channelAnalysisTree"></div>
+              <div id="channelAnalysisBot" class="channel-analysis-bot"></div>
+            </section>
+            <div id="channelAnalysisKpis" class="kpi-grid dashboard-kpis"></div>
+            <section class="panel">
+              <div class="panel-head compact-head">
+                <h2>营期趋势</h2>
+                <div id="channelAnalysisMetricPicker" class="metric-picker"></div>
+              </div>
+              <div id="channelAnalysisTrend" class="channel-trend"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="teamCalibrationPanel" class="panel" hidden>
+          <div class="panel-head">
+            <div>
+              <h2>工作室校准</h2>
+              <p class="muted">根据“渠道归属”维护工作室分类；新负责人未匹配时会提示补充。</p>
+            </div>
+            <button class="primary-btn" id="saveTeamCalibration" type="button">保存工作室校准</button>
+          </div>
+          <div id="teamCalibrationRows" class="table-wrap"></div>
+        </section>
+      </section>
+
+      <section id="daily" class="view">
+        <div class="toolbar">
+          <input id="dailyMonthFilter" type="month" />
+          <select id="dailySubchannelFilter">
+            <option value="">全部子渠道</option>
+          </select>
+        </div>
+        <div class="chart-panel">
+          <div class="panel-head compact-head">
+            <h2>月度 GMV 达成</h2>
+            <div class="chart-legend">
+              <span class="actual-line">实际达成</span>
+              <span class="plan-line">预计达成</span>
+            </div>
+          </div>
+          <div id="dailyBars" class="bars"></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>目标 Leads</th>
+                <th>实际 Leads</th>
+                <th>Leads 达成率</th>
+                <th>目标 GMV</th>
+                <th>实际 GMV</th>
+                <th>GMV 达成率</th>
+                <th>正价学员</th>
+              </tr>
+            </thead>
+            <tbody id="dailyRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="channels" class="view">
+        <div class="toolbar">
+          <select id="channelLevelFilter">
+            <option value="subchannels">子渠道明细</option>
+            <option value="studios">工作室汇总</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>口径</th>
+                <th>渠道分类</th>
+                <th>Leads</th>
+                <th>GMV</th>
+                <th>消耗</th>
+                <th>正价学员</th>
+                <th>转化率</th>
+                <th>ROI</th>
+                <th>R值</th>
+              </tr>
+            </thead>
+            <tbody id="channelRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

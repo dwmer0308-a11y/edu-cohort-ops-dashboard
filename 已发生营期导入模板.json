@@ -1,0 +1,13 @@
+{
+  "actualCampaigns": [
+    {
+      "name": "书法894.1.BZ.0323",
+      "actualLeads": 500,
+      "actualGmv": 42000,
+      "spend": 12000,
+      "fullPriceStudents": 18,
+      "categories": "BD1-图书",
+      "source": "示例"
+    }
+  ]
+}

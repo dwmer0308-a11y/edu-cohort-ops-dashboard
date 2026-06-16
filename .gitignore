@@ -1,0 +1,32 @@
+.DS_Store
+__pycache__/
+*.pyc
+node_modules
+.codex/
+.gstack/
+
+# Runtime logs and local server output.
+*.log
+*.err.log
+*.out.log
+*.screen.log
+
+# Local credentials, browser sessions, and integration check artifacts.
+.local/
+data/integration-checks/raw/
+data/integration-checks/normalized/
+data/integration-checks/reports/
+
+# Local business data caches and generated backups.
+data/config.json
+data/operation-log.jsonl
+data/revenue-actuals.json
+data/revenue-targets.json
+data/backups/
+
+# Generated exports and packaged local builds.
+exports/
+*.zip
+
+# Keep example files commit-safe.
+!data/integration-sources.example.json
